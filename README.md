@@ -81,6 +81,6 @@ self-explanatory.
 - The WebVR IDL: https://github.com/vvuk/gecko-dev/blob/oculus/dom/webidl/VRDevice.webidl
 
 # 動作確認用サンプルページ
-[こちら](https://github.com/gtk2k/gtk2k.github.io)で動作確認用サンプルページを用意しました。
+[こちら](https://github.com/gtk2k/gtk2k.github.io)に動作確認用サンプルページを用意しました。
  
 
