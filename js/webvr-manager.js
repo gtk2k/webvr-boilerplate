@@ -82,7 +82,7 @@ WebVRManager.prototype.getHMD = function() {
     navigator.getVRDevices().then(function(devices) {
       // Promise succeeds, but check if there are any devices actually.
       for (var i = 0; i < devices.length; i++) {
-        if (devices[i] instanceof HMDVRDevice) {
+        if (devices[i] instanceof HMDVRDevice || devices[i] instanceof HMDPositionSensorVRDevice) {
           resolve(devices[i]);
           break;
         }
@@ -124,15 +124,12 @@ WebVRManager.prototype.createVRButton = function() {
   s.userSelect = 'none';
   s.webkitUserSelect = 'none';
   s.MozUserSelect = 'none';
-  s.cursor = 'pointer';
   // Prevent button from being dragged.
   button.draggable = false;
   button.addEventListener('dragstart', function(e) {
     e.preventDefault();
   });
-  if (!this.hideButton) {
-    document.body.appendChild(button);
-  }
+  document.body.appendChild(button);
   return button;
 };
 
@@ -362,18 +359,26 @@ WebVRManager.prototype.getOS = function(osName) {
 
 WebVRManager.prototype.enterVR = function() {
   console.log('Entering VR.');
-  // Enter fullscreen mode (note: this doesn't work in iOS).
-  this.effect.setFullScreen(true);
-  // Lock down orientation, pointer, etc.
-  this.requestOrientationLock();
-  // Set style on button.
-  this.setMode(Modes.VR);
+  if (this.effect.isWSBridge) {
+    this.effect.vrHMD.wsStart();
+  } else {
+    // Enter fullscreen mode (note: this doesn't work in iOS).
+    this.effect.setFullScreen(true);
+    // Lock down orientation, pointer, etc.
+    this.requestOrientationLock();
+    // Set style on button.
+    this.setMode(Modes.VR);
+  }
 };
 
 WebVRManager.prototype.exitVR = function() {
   console.log('Exiting VR.');
   // Leave fullscreen mode (note: this doesn't work in iOS).
-  this.effect.setFullScreen(false);
+  if (this.effect.isWSBridge) {
+    this.effect.vrHMD.wsStart();
+  } else {
+    this.effect.setFullScreen(false);
+  }
   // Release orientation, wake, pointer lock.
   this.releaseOrientationLock();
   this.releaseWakeLock();

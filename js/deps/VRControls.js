@@ -3,19 +3,25 @@
  * @author mrdoob / http://mrdoob.com
  */
 
-THREE.VRControls = function ( object, onError ) {
+THREE.VRControls = function ( object, onError, normalInput ) {
 
 	var scope = this;
 
 	var vrInputs = [];
 
+	var normalModeInput = normalInput;
+
 	function filterInvalidDevices( devices ) {
 
-		// Exclude Cardboard position sensor if Oculus exists.
+		var
+			OculusDeviceName = 'VR Position Device (oculus)',
+			CardboardDeviceName = 'VR Position Device (cardboard)';
 
+
+		// Exclude Cardboard position sensor if Oculus exists.
 		var oculusDevices = devices.filter( function ( device ) {
 
-			return device.deviceName.toLowerCase().indexOf('oculus') !== -1;
+			return device.deviceName === OculusDeviceName;
 
 		} );
 
@@ -23,7 +29,7 @@ THREE.VRControls = function ( object, onError ) {
 
 			return devices.filter( function ( device ) {
 
-				return device.deviceName.toLowerCase().indexOf('cardboard') === -1;
+				return device.deviceName !== CardboardDeviceName;
 
 			} );
 
@@ -41,7 +47,8 @@ THREE.VRControls = function ( object, onError ) {
 
 		for ( var i = 0; i < devices.length; i ++ ) {
 
-			if ( devices[ i ] instanceof PositionSensorVRDevice ) {
+		  if (devices[i] instanceof PositionSensorVRDevice ||
+        (window.HMDPositionSensorVRDevice && devices[i] instanceof HMDPositionSensorVRDevice)) {
 
 				vrInputs.push( devices[ i ] );
 
@@ -65,28 +72,31 @@ THREE.VRControls = function ( object, onError ) {
 
 	this.scale = 1;
 
-	this.update = function () {
+	this.update = function (isVRMode) {
+	  if (!isVRMode && normalModeInput) {
+	    var state = normalModeInput.getState();
+	    object.quaternion.copy(state.orientation);
+	  } else {
+	    for (var i = 0; i < vrInputs.length; i++) {
 
-		for ( var i = 0; i < vrInputs.length; i ++ ) {
+	      var vrInput = vrInputs[i];
 
-			var vrInput = vrInputs[ i ];
+	      var state = vrInput.getState();
 
-			var state = vrInput.getState();
+	      if (state.orientation !== null) {
 
-			if ( state.orientation !== null ) {
+	        object.quaternion.copy(state.orientation);
 
-				object.quaternion.copy( state.orientation );
+	      }
 
-			}
+	      if (state.position !== null) {
 
-			if ( state.position !== null ) {
+	        object.position.copy(state.position).multiplyScalar(scope.scale);
 
-				object.position.copy( state.position ).multiplyScalar( scope.scale );
+	      }
 
-			}
-
-		}
-
+	    }
+	  }
 	};
 
 	this.resetSensor = function () {

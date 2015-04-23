@@ -11,46 +11,41 @@
 
 THREE.VREffect = function ( renderer, onError ) {
 
-	var vrHMD;
+	this.vrHMD;
 	var eyeTranslationL, eyeFOVL;
 	var eyeTranslationR, eyeFOVR;
+	this.loaded = false;
+	var that = this;
+	this.isWSBridge = false;
+	this.urlArgs = {};
+	location.search.substr(1).split('&').forEach(function (elm) {
+	  var kvp = elm.split('=');
+	  that.urlArgs[kvp[0]] = kvp[1];
+	});
 
 	function gotVRDevices( devices ) {
 
 		for ( var i = 0; i < devices.length; i ++ ) {
 
-			if ( devices[ i ] instanceof HMDVRDevice ) {
+		  if (devices[i] instanceof HMDVRDevice ||
+        (window.HMDPositionSensorVRDevice && devices[i] instanceof HMDPositionSensorVRDevice)) {
+			  that.vrHMD = devices[i];
+			  if (window.HMDPositionSensorVRDevice && that.vrHMD instanceof HMDPositionSensorVRDevice) {
+			    that.isWSBridge = true;
+			    if (that.urlArgs.pg == 'oculus') {
+			      that.vrHMD.wsStart();
+			    }
+			  } else {
+			    that.getEyeParameters();
+			  }
 
-				vrHMD = devices[ i ];
-
-				if ( vrHMD.getEyeParameters !== undefined ) {
-
-					var eyeParamsL = vrHMD.getEyeParameters( 'left' );
-					var eyeParamsR = vrHMD.getEyeParameters( 'right' );
-
-					eyeTranslationL = eyeParamsL.eyeTranslation;
-					eyeTranslationR = eyeParamsR.eyeTranslation;
-					eyeFOVL = eyeParamsL.recommendedFieldOfView;
-					eyeFOVR = eyeParamsR.recommendedFieldOfView;
-
-				} else {
-
-					// TODO: This is an older code path and not spec compliant.
-					// It should be removed at some point in the near future.
-					eyeTranslationL = vrHMD.getEyeTranslation( 'left' );
-					eyeTranslationR = vrHMD.getEyeTranslation( 'right' );
-					eyeFOVL = vrHMD.getRecommendedEyeFieldOfView( 'left' );
-					eyeFOVR = vrHMD.getRecommendedEyeFieldOfView( 'right' );
-
-				}
-
-				break; // We keep the first we encounter
+			  break; // We keep the first we encounter
 
 			}
 
 		}
 
-		if ( vrHMD === undefined ) {
+		if ( that.vrHMD === undefined ) {
 
 			if ( onError ) onError( 'HMD not available' );
 
@@ -59,12 +54,13 @@ THREE.VREffect = function ( renderer, onError ) {
 	}
 
 	if ( navigator.getVRDevices ) {
-
+    
 		navigator.getVRDevices().then( gotVRDevices );
 
 	}
 
-	//
+  //
+	if (!renderer) return;
 
 	this.scale = 1;
 
@@ -73,6 +69,30 @@ THREE.VREffect = function ( renderer, onError ) {
 		renderer.setSize( width, height );
 
 	};
+
+	this.getEyeParameters = function () {
+	  if (that.vrHMD.getEyeParameters !== undefined) {
+
+	    var eyeParamsL = that.vrHMD.getEyeParameters('left');
+	    var eyeParamsR = that.vrHMD.getEyeParameters('right');
+
+	    eyeTranslationL = eyeParamsL.eyeTranslation;
+	    eyeTranslationR = eyeParamsR.eyeTranslation;
+	    eyeFOVL = eyeParamsL.recommendedFieldOfView;
+	    eyeFOVR = eyeParamsR.recommendedFieldOfView;
+
+	  } else {
+
+	    // TODO: This is an older code path and not spec compliant.
+	    // It should be removed at some point in the near future.
+	    eyeTranslationL = that.vrHMD.getEyeTranslation('left');
+	    eyeTranslationR = that.vrHMD.getEyeTranslation('right');
+	    eyeFOVL = that.vrHMD.getRecommendedEyeFieldOfView('left');
+	    eyeFOVR = that.vrHMD.getRecommendedEyeFieldOfView('right');
+
+	  }
+
+	}
 
 	// fullscreen
 
@@ -83,15 +103,15 @@ THREE.VREffect = function ( renderer, onError ) {
 
 	document.addEventListener( fullscreenchange, function ( event ) {
 
-		isFullscreen = document.mozFullScreenElement || document.webkitFullscreenElement;
+	  isFullscreen = !!(document.mozFullScreenElement || document.webkitFullscreenElement);
 
 	}, false );
 
 	this.setFullScreen = function ( boolean ) {
-
-		if ( vrHMD === undefined ) return;
+	  var vrHMD = that.vrHMD;
+		if ( that.vrHMD === undefined ) return;
 		if ( isFullscreen === boolean ) return;
-
+		if (that.isWSBridge) vrHMD = null;
 		if ( canvas.mozRequestFullScreen ) {
 
 			canvas.mozRequestFullScreen( { vrDisplay: vrHMD } );
@@ -109,9 +129,9 @@ THREE.VREffect = function ( renderer, onError ) {
 	var cameraL = new THREE.PerspectiveCamera();
 	var cameraR = new THREE.PerspectiveCamera();
 
-	this.render = function ( scene, camera ) {
+	this.render = function ( scene, camera, videoTexture ) {
 
-		if ( vrHMD ) {
+		if ( that.vrHMD ) {
 
 			var sceneL, sceneR;
 
@@ -127,13 +147,17 @@ THREE.VREffect = function ( renderer, onError ) {
 
 			}
 
-			var size = renderer.getSize();
+			//var size = renderer.getSize(); // getSize()‚Ír72‚©‚ç?
+			var size = { width: renderer.domElement.width, height: renderer.domElement.height };
 			size.width /= 2;
 
 			renderer.enableScissorTest( true );
 			renderer.clear();
 
-			if ( camera.parent === undefined ) camera.updateMatrixWorld();
+			if (camera.parent === undefined) camera.updateMatrixWorld();
+			if (that.isWSBridge) {
+			  this.getEyeParameters();
+			}
 
 			cameraL.projectionMatrix = fovToProjection( eyeFOVL, true, camera.near, camera.far );
 			cameraR.projectionMatrix = fovToProjection( eyeFOVR, true, camera.near, camera.far );
@@ -144,13 +168,15 @@ THREE.VREffect = function ( renderer, onError ) {
 			cameraL.translateX( eyeTranslationL.x * this.scale );
 			cameraR.translateX( eyeTranslationR.x * this.scale );
 
-			// render left eye
+		  // render left eye
+			videoTexture.offset.x = 0;
 			renderer.setViewport( 0, 0, size.width, size.height );
 			renderer.setScissor( 0, 0, size.width, size.height );
 			renderer.render( sceneL, cameraL );
 
 			// render right eye
-			renderer.setViewport( size.width, 0, size.width, size.height );
+			videoTexture.offset.x = .5;
+			renderer.setViewport(size.width, 0, size.width, size.height);
 			renderer.setScissor( size.width, 0, size.width, size.height );
 			renderer.render( sceneR, cameraR );
 
