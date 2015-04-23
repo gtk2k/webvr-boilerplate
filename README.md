@@ -20,17 +20,20 @@ mobile devices and desktop devices.
 
 - THREE.js controls which take advantage of the WebVR API.
 - Usually attached to the THREE.Camera to look around the scene.
+- WebSocketBridgeHMDPositionSensorVRDeviceの対応修正したものを使用しています。
 
 [**VREffect** `VREffect.js`](https://github.com/mrdoob/three.js/blob/master/examples/js/effects/VREffect.js)
 
 - THREE.js effect which renders a scene with two cameras in it.
 - Puts the two images side-by-side.
+- WebSocketBridgeHMDPositionSensorVRDeviceの対応修正したものを使用しています。
 
 [**WebVR polyfill** `webvr-polyfill.js`](https://github.com/borismus/webvr-polyfill)
 
 - For Cardboard rendering.
 - On mobile, supports rotation via DeviceOrientation.
 - On desktop, supports looking with the mouse or with arrow keys.
+- WebSocketBridgeHMDPositionSensorVRDeviceの対応修正したものを使用しています。
 
 **WebVR manager** `webvr-manager.js` (lives in this repository)
 
@@ -41,6 +44,7 @@ mobile devices and desktop devices.
 - For desktop, if an HMD is connected, goes into split-screen rendering
   mode. Otherwise, goes into immersive fullscreen mode (with pointer lock).
 - For mobile, goes into Cardboard side-by-side rendering mode.
+- WebSocketBridgeHMDPositionSensorVRDeviceの対応修正したものを使用しています。
 
 TODO: Provide a configuration UI for switching modes if we guessed
 wrong.
